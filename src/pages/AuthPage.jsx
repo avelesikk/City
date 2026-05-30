@@ -1,9 +1,14 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { loginUser, registerUser } from '../api/authApi';
 import './AuthPage.css';
 
 const PASSWORD_LENGTH = 6;
+
+const MSG_NAME_LETTERS_ONLY =
+  'Укажите только буквы — цифры и специальные символы в этом поле не используются.';
+const MSG_PASSWORD_DIGITS_ONLY =
+  'Пароль задаётся только цифрами.';
 
 export default function AuthPage({ userSession, onLogin }) {
   const navigate = useNavigate();
@@ -27,6 +32,14 @@ export default function AuthPage({ userSession, onLogin }) {
   const [isLoading, setIsLoading] = useState(false);
   const [registerErrors, setRegisterErrors] = useState({});
   const [hasRegisterAttemptedSubmit, setHasRegisterAttemptedSubmit] = useState(false);
+  const nameInvalidRef = useRef({ last_name: false, first_name: false, name: false });
+  const passwordNonDigitRef = useRef({ password: false, password_confirm: false });
+
+  const switchTab = (tab) => {
+    setActiveTab(tab);
+    setError('');
+    setSuccess('');
+  };
 
   if (userSession?.token) {
     const adminTarget = String(userSession?.user?.role || '') === 'admin' ? '/admin/panel' : '/account';
@@ -56,6 +69,13 @@ export default function AuthPage({ userSession, onLogin }) {
 
   const normalizeNameInput = (rawValue) => String(rawValue || '').replace(/[^A-Za-zА-Яа-яЁё]/g, '');
   const onlyDigits = (rawValue) => String(rawValue || '').replace(/\D/g, '');
+  const loginPasswordDigits = (rawValue) =>
+    String(rawValue || '')
+      .replace(/\D/g, '')
+      .slice(0, PASSWORD_LENGTH);
+
+  const nameFieldErrorKey = (field) =>
+    field === 'last_name' ? 'last_name' : field === 'first_name' ? 'first_name' : 'name';
 
   const validateRegisterForm = (form) => {
     const errors = {};
@@ -71,7 +91,7 @@ export default function AuthPage({ userSession, onLogin }) {
       errors.password = 'Введите пароль.';
     } else {
       if (!/^\d+$/.test(password)) {
-        errors.password = 'Пароль должен состоять только из цифр.';
+        errors.password = MSG_PASSWORD_DIGITS_ONLY;
       } else if (password.length !== PASSWORD_LENGTH) {
         errors.password = `Пароль должен содержать ровно ${PASSWORD_LENGTH} цифр.`;
       }
@@ -81,7 +101,7 @@ export default function AuthPage({ userSession, onLogin }) {
       errors.password_confirm = 'Повторите пароль.';
     } else {
       if (!/^\d+$/.test(passwordConfirm)) {
-        errors.password_confirm = 'Подтверждение пароля должно состоять только из цифр.';
+        errors.password_confirm = MSG_PASSWORD_DIGITS_ONLY;
       } else if (passwordConfirm.length !== PASSWORD_LENGTH) {
         errors.password_confirm = `Подтверждение пароля должно содержать ровно ${PASSWORD_LENGTH} цифр.`;
       } else if (password && password !== passwordConfirm) {
@@ -92,11 +112,67 @@ export default function AuthPage({ userSession, onLogin }) {
     return errors;
   };
 
+  const mergeRegisterErrors = (form) => {
+    const e = { ...validateRegisterForm(form) };
+    const n = nameInvalidRef.current;
+    const p = passwordNonDigitRef.current;
+    if (n.last_name) e.last_name = MSG_NAME_LETTERS_ONLY;
+    if (n.first_name) e.first_name = MSG_NAME_LETTERS_ONLY;
+    if (n.name) e.name = MSG_NAME_LETTERS_ONLY;
+    if (p.password) e.password = MSG_PASSWORD_DIGITS_ONLY;
+    if (p.password_confirm) e.password_confirm = MSG_PASSWORD_DIGITS_ONLY;
+    return e;
+  };
+
   const updateRegisterField = (field, value) => {
     setRegisterForm((prev) => {
       const next = { ...prev, [field]: value };
       if (hasRegisterAttemptedSubmit) {
-        setRegisterErrors(validateRegisterForm(next));
+        setRegisterErrors(mergeRegisterErrors(next));
+      }
+      return next;
+    });
+  };
+
+  const updateRegisterNameField = (field, rawValue) => {
+    const key = nameFieldErrorKey(field);
+    const cleaned = normalizeNameInput(rawValue);
+    const hasInvalid = /[^A-Za-zА-Яа-яЁё]/.test(String(rawValue || ''));
+    nameInvalidRef.current[key] = hasInvalid;
+
+    setRegisterForm((prev) => {
+      const next = { ...prev, [field]: cleaned };
+      if (hasRegisterAttemptedSubmit) {
+        setRegisterErrors(mergeRegisterErrors(next));
+      } else {
+        setRegisterErrors((prevErr) => {
+          const m = { ...prevErr };
+          if (hasInvalid) m[key] = MSG_NAME_LETTERS_ONLY;
+          else delete m[key];
+          return m;
+        });
+      }
+      return next;
+    });
+  };
+
+  const updateRegisterPasswordField = (field, rawValue) => {
+    const digits = onlyDigits(rawValue).slice(0, PASSWORD_LENGTH);
+    const raw = String(rawValue || '');
+    const hasNonDigit = raw.length > 0 && /[^\d]/.test(raw);
+    passwordNonDigitRef.current[field] = hasNonDigit;
+
+    setRegisterForm((prev) => {
+      const next = { ...prev, [field]: digits };
+      if (hasRegisterAttemptedSubmit) {
+        setRegisterErrors(mergeRegisterErrors(next));
+      } else {
+        setRegisterErrors((prevErr) => {
+          const m = { ...prevErr };
+          if (hasNonDigit) m[field] = MSG_PASSWORD_DIGITS_ONLY;
+          else delete m[field];
+          return m;
+        });
       }
       return next;
     });
@@ -127,7 +203,7 @@ export default function AuthPage({ userSession, onLogin }) {
     setError('');
     setSuccess('');
     setHasRegisterAttemptedSubmit(true);
-    const frontErrors = validateRegisterForm(registerForm);
+    const frontErrors = mergeRegisterErrors(registerForm);
     setRegisterErrors(frontErrors);
     if (Object.keys(frontErrors).length) return;
     setIsLoading(true);
@@ -149,6 +225,8 @@ export default function AuthPage({ userSession, onLogin }) {
       });
       setRegisterErrors({});
       setHasRegisterAttemptedSubmit(false);
+      nameInvalidRef.current = { last_name: false, first_name: false, name: false };
+      passwordNonDigitRef.current = { password: false, password_confirm: false };
     } catch (err) {
       setError(err.message || 'Не удалось зарегистрироваться.');
       setActiveTab('register');
@@ -164,21 +242,21 @@ export default function AuthPage({ userSession, onLogin }) {
           <button
             type="button"
             className={`auth-tab${activeTab === 'login' ? ' active' : ''}`}
-            onClick={() => setActiveTab('login')}
+            onClick={() => switchTab('login')}
           >
             Вход
           </button>
           <button
             type="button"
             className={`auth-tab${activeTab === 'register' ? ' active' : ''}`}
-            onClick={() => setActiveTab('register')}
+            onClick={() => switchTab('register')}
           >
             Регистрация
           </button>
         </div>
 
-        {error ? <div className="auth-error">{error}</div> : null}
-        {success ? <div className="auth-success">{success}</div> : null}
+        {activeTab === 'login' && error ? <div className="auth-error">{error}</div> : null}
+        {activeTab === 'login' && success ? <div className="auth-success">{success}</div> : null}
 
         {activeTab === 'login' ? (
           <form className="auth-card" onSubmit={onLoginSubmit} autoComplete="off">
@@ -200,10 +278,17 @@ export default function AuthPage({ userSession, onLogin }) {
               <input
                 id="login-password"
                 value={loginForm.password}
-                onChange={(e) => setLoginForm((prev) => ({ ...prev, password: e.target.value }))}
+                onChange={(e) =>
+                  setLoginForm((prev) => ({
+                    ...prev,
+                    password: loginPasswordDigits(e.target.value),
+                  }))
+                }
                 type="password"
                 autoComplete="new-password"
                 placeholder="Ваш пароль"
+                inputMode="numeric"
+                maxLength={PASSWORD_LENGTH}
                 required
               />
             </div>
@@ -212,7 +297,7 @@ export default function AuthPage({ userSession, onLogin }) {
             </button>
             <div className="form-footer">
               Нет аккаунта?{' '}
-              <button type="button" className="form-footer__link" onClick={() => setActiveTab('register')}>
+              <button type="button" className="form-footer__link" onClick={() => switchTab('register')}>
                 Зарегистрируйтесь
               </button>
             </div>
@@ -223,42 +308,45 @@ export default function AuthPage({ userSession, onLogin }) {
             <div className="auth-grid">
               <div className="auth-field">
                 <label htmlFor="reg-last">Фамилия</label>
-                <input
-                  id="reg-last"
-                  value={registerForm.last_name}
-                  onChange={(e) => updateRegisterField('last_name', normalizeNameInput(e.target.value))}
-                  type="text"
-                  placeholder="Введите фамилию"
-                  pattern="^[A-Za-zА-Яа-яЁё]+$"
-                  title="Только буквы"
-                  required
-                />
-              </div>
+              <input
+                id="reg-last"
+                value={registerForm.last_name}
+                onChange={(e) => updateRegisterNameField('last_name', e.target.value)}
+                type="text"
+                placeholder="Введите фамилию"
+                pattern="^[A-Za-zА-Яа-яЁё]+$"
+                title="Только буквы"
+                required
+              />
+                {registerErrors.last_name ? <small className="auth-field-error">{registerErrors.last_name}</small> : null}
+            </div>
               <div className="auth-field">
                 <label htmlFor="reg-first">Имя</label>
-                <input
-                  id="reg-first"
-                  value={registerForm.first_name}
-                  onChange={(e) => updateRegisterField('first_name', normalizeNameInput(e.target.value))}
-                  type="text"
-                  placeholder="Введите имя"
-                  pattern="^[A-Za-zА-Яа-яЁё]+$"
-                  title="Только буквы"
-                  required
-                />
-              </div>
+              <input
+                id="reg-first"
+                value={registerForm.first_name}
+                onChange={(e) => updateRegisterNameField('first_name', e.target.value)}
+                type="text"
+                placeholder="Введите имя"
+                pattern="^[A-Za-zА-Яа-яЁё]+$"
+                title="Только буквы"
+                required
+              />
+                {registerErrors.first_name ? <small className="auth-field-error">{registerErrors.first_name}</small> : null}
+            </div>
               <div className="auth-field">
                 <label htmlFor="reg-middle">Отчество</label>
-                <input
-                  id="reg-middle"
-                  value={registerForm.name}
-                  onChange={(e) => updateRegisterField('name', normalizeNameInput(e.target.value))}
-                  type="text"
-                  placeholder="Введите отчество"
-                  pattern="^[A-Za-zА-Яа-яЁё]*$"
-                  title="Только буквы"
-                />
-              </div>
+              <input
+                id="reg-middle"
+                value={registerForm.name}
+                onChange={(e) => updateRegisterNameField('name', e.target.value)}
+                type="text"
+                placeholder="Введите отчество"
+                pattern="^[A-Za-zА-Яа-яЁё]*$"
+                title="Только буквы"
+              />
+                {registerErrors.name ? <small className="auth-field-error">{registerErrors.name}</small> : null}
+            </div>
               <div className="auth-field">
                 <label htmlFor="reg-age">Дата рождения</label>
                 <input
@@ -301,7 +389,7 @@ export default function AuthPage({ userSession, onLogin }) {
                 <input
                   id="reg-pass"
                   value={registerForm.password}
-                  onChange={(e) => updateRegisterField('password', e.target.value)}
+                  onChange={(e) => updateRegisterPasswordField('password', e.target.value)}
                   autoComplete="new-password"
                   placeholder="Введите пароль"
                   inputMode="numeric"
@@ -317,7 +405,7 @@ export default function AuthPage({ userSession, onLogin }) {
                 <input
                   id="reg-pass2"
                   value={registerForm.password_confirm}
-                  onChange={(e) => updateRegisterField('password_confirm', e.target.value)}
+                  onChange={(e) => updateRegisterPasswordField('password_confirm', e.target.value)}
                   type="password"
                   placeholder="Повторите пароль"
                   inputMode="numeric"
@@ -336,7 +424,7 @@ export default function AuthPage({ userSession, onLogin }) {
             </button>
             <div className="form-footer">
               Уже есть аккаунт?{' '}
-              <button type="button" className="form-footer__link" onClick={() => setActiveTab('login')}>
+              <button type="button" className="form-footer__link" onClick={() => switchTab('login')}>
                 Войдите
               </button>
             </div>
