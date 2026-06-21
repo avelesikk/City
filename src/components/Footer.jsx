@@ -14,7 +14,11 @@ export default function Footer() {
             <Link to="/privacy-policy" className="footer-privacy-link">
               Политика конфиденциальности
             </Link>
+            <div className="footer-sitemap-wrapper">
+    <a href="/sitemap.xml" target="_blank" rel="noreferrer">Карта сайта</a>
+  </div>
           </div>
+          
 
           <div className="footer-contacts">
             <h3>Контакты</h3>

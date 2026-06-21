@@ -32,7 +32,7 @@ function normalizeCoolingToKw(value, fallback = 2.6) {
   return `${parsed.toFixed(1)} кВт`;
 }
 
-export default function ProductPage({ onAddToCart, favoriteIds = [], onToggleFavorite }) {
+export default function ProductPage({ onAddToCart, favoriteIds = [], onToggleFavorite, userSession = null }) {
   const { productId } = useParams();
   const [product, setProduct] = useState(null);
   const [catalogProducts, setCatalogProducts] = useState([]);
@@ -233,7 +233,11 @@ export default function ProductPage({ onAddToCart, favoriteIds = [], onToggleFav
             </div>
           ) : null}
           {activeTab === 'reviews' ? (
-            <ReviewsSection productId={Number(product.id)} title={`Отзывы о ${product.name}`} />
+            <ReviewsSection
+              productId={Number(product.id)}
+              title={`Отзывы о ${product.name}`}
+              userSession={userSession}
+            />
           ) : null}
         </div>
 

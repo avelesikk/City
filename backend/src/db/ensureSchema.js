@@ -130,6 +130,15 @@ async function ensureSchema() {
   if (await columnExists('reviews', 'updated_at')) {
     await pool.execute(`ALTER TABLE reviews DROP COLUMN updated_at`);
   }
+  if (!(await columnExists('reviews', 'user_id'))) {
+    await pool.execute(`ALTER TABLE reviews ADD COLUMN user_id INT NULL`);
+  }
+  if (!(await indexExists('reviews', 'idx_reviews_user_id'))) {
+    await pool.execute(`ALTER TABLE reviews ADD INDEX idx_reviews_user_id (user_id)`);
+  }
+  if (!(await indexExists('reviews', 'uq_reviews_user_product'))) {
+    await pool.execute(`ALTER TABLE reviews ADD UNIQUE KEY uq_reviews_user_product (user_id, product_id)`);
+  }
 
   await pool.execute(`
     CREATE TABLE IF NOT EXISTS klient (

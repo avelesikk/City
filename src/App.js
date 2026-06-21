@@ -208,6 +208,7 @@ function AppContent() {
                 onAddToCart={addToCart}
                 favoriteIds={favoriteIds}
                 onToggleFavorite={toggleFavorite}
+                userSession={userSession}
               />
             }
           />

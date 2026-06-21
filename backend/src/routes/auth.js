@@ -444,3 +444,4 @@ router.patch('/orders/:orderId/cancel', resolveSessionUser, async (req, res) => 
 });
 
 module.exports = router;
+module.exports.resolveSessionUser = resolveSessionUser;

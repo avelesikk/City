@@ -755,7 +755,13 @@
   cursor: pointer;
   width: 100%;
 }
-
+.cart-checkout__admin-warning {
+  font-size: 15px;
+  color: #d32f2f;
+  font-weight: 500;
+  padding: 16px 20px;
+  text-align: center;
+}
 @media (max-width: 768px) {
   .cart-page {
     min-height: calc(100vh - 140px);

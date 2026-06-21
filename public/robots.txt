@@ -1,5 +1,4 @@
 # robots.txt for production SEO setup
-# Update domain in Sitemap after deploy.
 
 User-agent: *
 Allow: /
@@ -12,6 +11,5 @@ Disallow: /account
 Disallow: /cart
 Disallow: /favorites
 Disallow: /api/
-
-# Sitemap location (replace with your real domain)
-Sitemap: https://example.com/sitemap.xml
+# Sitemap location
+Sitemap: https://aira.m1lka.ru/sitemap.xml

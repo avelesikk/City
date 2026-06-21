@@ -3,7 +3,6 @@ import './CartPage.css';
 import { formatPrice, PRODUCTS as HOME_PRODUCTS, productsById } from '../data/products';
 import { Link } from 'react-router-dom';
 import { createUserOrder } from '../api/authApi';
-
 const CITY_GROUPS = [
   {
     label: 'Рязань и Рязанская область',
@@ -30,6 +29,8 @@ export default function CartPage({
   userSession = null,
   onClearCart,
 }) {
+  const user = userSession?.user || {};
+  const isAdmin = String(user?.role || 'user') === 'admin';
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [isOrderSuccessOpen, setIsOrderSuccessOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -66,7 +67,6 @@ export default function CartPage({
     .filter(Boolean);
 
   const totalPrice = normalizedItems.reduce((sum, item) => sum + item.price * item.qty, 0);
-  const user = userSession?.user || {};
   const bookingFullName = [user.last_name, user.first_name, user.name].filter(Boolean).join(' ') || user.full_name || '-';
   const bookingEmail = user.email || '-';
   const bookingPhone = user.phone_number || '-';
@@ -222,19 +222,25 @@ export default function CartPage({
                 <strong>{formatPrice(totalPrice)}</strong>
               </div>
               <div className="cart-checkout">
-                {isLoggedIn ? (
-                  <button type="button" className="cart-checkout__btn" onClick={() => setIsBookingOpen(true)}>
-                    Оформить заказ
-                  </button>
-                ) : (
-                  <div className="cart-checkout__login">
-                    <p>Для покупки товара войдите в аккаунт.</p>
-                    <Link to="/auth" className="cart-checkout__link">
-                      Войти в аккаунт
-                    </Link>
-                  </div>
-                )}
-              </div>
+  {isLoggedIn ? (
+    isAdmin ? (
+      <div className="cart-checkout__admin-warning">
+        Бронирование товаров доступно только клиентам.
+      </div>
+    ) : (
+      <button type="button" className="cart-checkout__btn" onClick={() => setIsBookingOpen(true)}>
+        Оформить заказ
+      </button>
+    )
+  ) : (
+    <div className="cart-checkout__login">
+      <p>Для покупки товара войдите в аккаунт.</p>
+      <Link to="/auth" className="cart-checkout__link">
+        Войти в аккаунт
+      </Link>
+    </div>
+  )}
+</div>
             </aside>
           </div>
         )}
@@ -425,7 +431,7 @@ export default function CartPage({
               />
               <span>
                 Нажимая на кнопку, вы соглашаетесь с{' '}
-                <Link to="/privacy-policy" className="booking-modal__policy-link" target="_blank" rel="noreferrer">
+                <Link to="/privacy-policy" className="booking-modal__policy-link" rel="noreferrer">
                   политикой конфиденциальности
                 </Link>
               </span>

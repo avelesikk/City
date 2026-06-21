@@ -77,6 +77,10 @@ footer h3 {
   transition: var(--transition);
   font-weight: 500;
 }
+.footer-sitemap-wrapper {
+  display: block;
+  margin-top: 8px;
+}
 
 @media (max-width: 900px) {
   .footer-content {

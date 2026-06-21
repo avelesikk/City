@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { loginUser, registerUser } from '../api/authApi';
+import { Link } from 'react-router-dom';
 import './AuthPage.css';
 
 const PASSWORD_LENGTH = 6;
@@ -34,6 +35,7 @@ export default function AuthPage({ userSession, onLogin }) {
   const [hasRegisterAttemptedSubmit, setHasRegisterAttemptedSubmit] = useState(false);
   const nameInvalidRef = useRef({ last_name: false, first_name: false, name: false });
   const passwordNonDigitRef = useRef({ password: false, password_confirm: false });
+  const [isPolicyChecked, setIsPolicyChecked] = useState(false);
 
   const switchTab = (tab) => {
     setActiveTab(tab);
@@ -254,9 +256,11 @@ export default function AuthPage({ userSession, onLogin }) {
             Регистрация
           </button>
         </div>
+{activeTab === 'login' && error && <div className="auth-error">{error}</div>}
+{activeTab === 'login' && success && <div className="auth-success">{success}</div>}
 
-        {activeTab === 'login' && error ? <div className="auth-error">{error}</div> : null}
-        {activeTab === 'login' && success ? <div className="auth-success">{success}</div> : null}
+{activeTab === 'register' && error && <div className="auth-error">{error}</div>}
+{activeTab === 'register' && success && <div className="auth-success">{success}</div>}
 
         {activeTab === 'login' ? (
           <form className="auth-card" onSubmit={onLoginSubmit} autoComplete="off">
@@ -417,8 +421,22 @@ export default function AuthPage({ userSession, onLogin }) {
                 {registerErrors.password_confirm ? (
                   <small className="auth-field-error">{registerErrors.password_confirm}</small>
                 ) : null}
-              </div>
+              </div>  
             </div>
+            <label className="booking-modal__consent">
+  <input
+    type="checkbox"
+    checked={isPolicyChecked}
+    onChange={(e) => setIsPolicyChecked(e.target.checked)}
+    required
+  />
+  <span>
+    Нажимая на кнопку, вы соглашаетесь с{' '}
+    <Link to="/privacy-policy" className="booking-modal__policy-link"  rel="noreferrer">
+      политикой конфиденциальности
+    </Link>
+  </span>
+</label>
             <button className="auth-submit auth-btn" type="submit" disabled={isLoading}>
               {isLoading ? 'Регистрируем...' : 'Зарегистрироваться'}
             </button>
